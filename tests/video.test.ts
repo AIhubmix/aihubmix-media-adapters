@@ -362,6 +362,22 @@ describe('buildVideoRequest — generic family (sora + wan2.x + jimeng)', () => 
     expect(typeof w.body.input_reference).toBe('string');
     expect(w.body.input_reference).toBe(DATA_URL);
   });
+
+  it('i2v: Sora object form is forced by wire name even when the injected cap lacks referenceAsObject', () => {
+    // A consumer that injects its OWN sora capability (no referenceAsObject flag)
+    // must still get the object form — Sora's requirement is an upstream hard fact.
+    const soraInjected: ModelCapability = {
+      id: 'sora-2', apiModel: 'sora-2', mediaType: 'video', family: 'generic',
+      caps: ['t2v', 'i2v'], secondsFormat: 'string', // no referenceAsObject
+    };
+    const s = buildVideoRequest(soraInjected, { prompt: 'x', durationSeconds: 8, imageRef: { dataUrl: DATA_URL } });
+    expect(s.body.input_reference).toEqual({ image_url: DATA_URL });
+    // a non-sora generic cap without the flag stays a bare string
+    const wan: ModelCapability = {
+      id: 'wan2.6-i2v', apiModel: 'wan2.6-i2v', mediaType: 'video', family: 'generic', caps: ['i2v'],
+    };
+    expect(typeof buildVideoRequest(wan, { prompt: 'x', imageRef: { dataUrl: DATA_URL } }).body.input_reference).toBe('string');
+  });
 });
 
 describe('buildVideoRequest — apiModelI2V + passthrough', () => {

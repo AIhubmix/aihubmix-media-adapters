@@ -200,9 +200,10 @@ describe('parity — aihubmix-video create-task body shapes', () => {
     expect(body).toEqual({ model: 'sora-2', prompt: 'sunset', seconds: 8, size: '1280x720' });
   });
 
-  it('sora-2 i2v (resolved input_reference, no model switch — sora has no apiModelI2V)', () => {
+  it('sora-2 i2v (input_reference as OBJECT { image_url }, no model switch — sora has no apiModelI2V)', () => {
     const body = buildBody(CONFIGS['sora-2']!, { prompt: 'clip', seconds: 4, size: '720x1280', finalReference: DATA });
-    expect(body).toEqual({ model: 'sora-2', prompt: 'clip', seconds: 4, size: '720x1280', input_reference: DATA });
+    // Sora requires the object form (a bare string 400s); forced by wire name.
+    expect(body).toEqual({ model: 'sora-2', prompt: 'clip', seconds: 4, size: '720x1280', input_reference: { image_url: DATA } });
   });
 
   it('wan2.5 i2v (switches to apiModelI2V + flat input_reference)', () => {

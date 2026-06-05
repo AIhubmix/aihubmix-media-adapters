@@ -280,10 +280,13 @@ export function buildVideoRequest(cap: ModelCapability, input: VideoBuildInput):
     // The field name `dataUrl` carries the final input_reference value, which may
     // be a data URL or a public URL — the caller resolves it; we only place it.
     // Sora requires the OBJECT form `{ image_url }` (gateway/OpenAI 400s on a
-    // string); wan2.x and other generic vendors accept the bare string. The
-    // `referenceAsObject` capability flag selects the shape per model.
+    // string); wan2.x and other generic vendors accept the bare string. Driven by
+    // the `referenceAsObject` capability flag, BUT also force-detected by wire
+    // name: Sora's object requirement is an upstream hard fact, so it must hold
+    // even when the caller injects its own capabilities without the flag set.
+    const referenceAsObject = cap.referenceAsObject || /^sora/i.test(wireModel);
     if (hasReference) {
-      body.input_reference = cap.referenceAsObject
+      body.input_reference = referenceAsObject
         ? { image_url: input.imageRef!.dataUrl }
         : input.imageRef!.dataUrl;
     }

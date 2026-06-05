@@ -4,6 +4,18 @@ All notable changes to this package are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/) and the project adheres to
 [Semantic Versioning](https://semver.org/).
 
+## 0.2.1
+
+### Bug fixes
+
+- **Sora i2v still sent `input_reference` as a string when the caller injected its
+  own capabilities.** 0.2.0 only switched to the object form when the capability
+  carried `referenceAsObject: true`; consumers that inject their own catalogue
+  (not the bundled seed) lacked the flag and kept hitting the 400. The object form
+  is now also force-detected by wire name (`sora*`), so Sora always emits
+  `input_reference: { image_url }` regardless of capability source.
+  `referenceAsObject` remains an explicit opt-in for any other vendor.
+
 ## 0.2.0
 
 ### Bug fixes
