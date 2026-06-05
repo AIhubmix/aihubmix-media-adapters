@@ -1,6 +1,6 @@
 {
   "name": "@aihubmix/media-adapters",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Pure, isomorphic interpreter that maps a unified media request to each vendor's native AIHubMix request shape (video; image/audio contracts stubbed). No transport — model capabilities are injected.",
   "type": "module",
   "license": "MIT",
