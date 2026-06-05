@@ -38,6 +38,11 @@ export function deriveVideoFamily(wireModel: string, cap?: ModelCapability): Med
   // happyhorse-1.0-i2v call). wan2.x, by contrast, is normalised by the gateway
   // to the flat OpenAI-style /videos body (input_reference) — so wan* stays generic.
   if (m.startsWith('happyhorse')) return 'dashscope';
+  // wan2.7 i2v is DashScope-native: it requires the input.media + parameters wire
+  // shape (verified against a working wan2.7-i2v call), unlike the older wan2.x
+  // i2v which the gateway normalises to the flat input_reference body. wan2.7 t2v
+  // stays generic (verified working), so we key off the resolved i2v wire name.
+  if (m.startsWith('wan2.7') && m.includes('i2v')) return 'dashscope';
   // veo* goes through the gateway's OpenAI→Gemini predictLongRunning shim, which
   // wants seconds as a NUMBER and only `size` (no aspect_ratio). Its own family.
   if (m.startsWith('veo')) return 'veo';
@@ -164,6 +169,13 @@ function buildSeedanceContent(input: VideoBuildInput): Array<Record<string, unkn
       role: 'first_frame',
     });
   }
+  if (input.lastFrameRef?.dataUrl) {
+    content.push({
+      type: 'image_url',
+      image_url: { url: input.lastFrameRef.dataUrl },
+      role: 'last_frame',
+    });
+  }
   for (const ref of input.extraImageRefs ?? []) {
     if (ref?.dataUrl) {
       content.push({
@@ -216,9 +228,10 @@ export function buildVideoRequest(cap: ModelCapability, input: VideoBuildInput):
     // FIRST FRAME inside input.media; everything tunable lives under
     // `parameters`. Verified against a working happyhorse-1.0-i2v call.
     const dashInput: Record<string, unknown> = { prompt: input.prompt };
-    if (hasReference) {
-      dashInput.media = [{ type: 'first_frame', url: input.imageRef!.dataUrl }];
-    }
+    const media: Array<Record<string, unknown>> = [];
+    if (input.imageRef?.dataUrl) media.push({ type: 'first_frame', url: input.imageRef.dataUrl });
+    if (input.lastFrameRef?.dataUrl) media.push({ type: 'last_frame', url: input.lastFrameRef.dataUrl });
+    if (media.length) dashInput.media = media;
     const parameters: Record<string, unknown> = {
       resolution: snapResolutionToken(input.resolution, input.size).toUpperCase(),
       duration: seconds,
@@ -232,8 +245,10 @@ export function buildVideoRequest(cap: ModelCapability, input: VideoBuildInput):
     // Google Veo via the gateway's OpenAI→Gemini predictLongRunning shim. Unlike
     // the generic branch, `seconds` MUST be a number and `size` is the only size
     // hint it honours — sending the string "8" or an extra `aspect_ratio` makes
-    // it fail. TEXT-TO-VIDEO ONLY: every reference-image form is rejected by the
-    // shim, so we never attach one here — the caller gates i2v out via caps.
+    // it fail. i2v: the gateway maps a single `input_reference` image to Veo's
+    // `referenceImages` (an ASSET/style reference, NOT first_frame/last_frame
+    // interpolation — those aren't exposed). So we attach only `imageRef`; any
+    // `lastFrameRef`/extras are ignored for veo.
     body = {
       model: wireModel,
       prompt: input.prompt,
@@ -244,6 +259,9 @@ export function buildVideoRequest(cap: ModelCapability, input: VideoBuildInput):
     };
     if (typeof input.generateAudio === 'boolean') body.generate_audio = input.generateAudio;
     if (typeof input.seed === 'number') body.seed = input.seed;
+    // Reference image as a data/public URL string — the gateway resolves it and
+    // converts to a Veo referenceImages asset entry.
+    if (hasReference) body.input_reference = input.imageRef!.dataUrl;
   } else {
     // Generic OpenAI-style /videos (sora / wan2.x / jimeng / …). The size hint is
     // `size` — NOT `aspect_ratio`, which Sora rejects with "Unknown parameter:

@@ -27,7 +27,9 @@ const VEO: ModelCapability = {
   apiModel: 'veo-3.1-generate-preview',
   mediaType: 'video',
   family: 'veo',
-  caps: ['t2v'], // veo is text-to-video only on the AIHubMix gateway
+  // i2v via a single reference image (gateway maps input_reference → referenceImages asset).
+  caps: ['t2v', 'i2v'],
+  supportedFrameImages: ['reference_image'],
   supportedDurations: [4, 6, 8],
 };
 
@@ -127,6 +129,21 @@ describe('buildVideoRequest — seedance family', () => {
     expect(content[1]).toEqual({ type: 'image_url', image_url: { url: DATA_URL }, role: 'first_frame' });
   });
 
+  it('flf2v: emits first_frame + last_frame + reference_image content items in order', () => {
+    const LAST_URL = 'data:image/png;base64,LAST';
+    const REF_URL = 'data:image/png;base64,REF';
+    const built = buildVideoRequest(SEEDANCE, {
+      prompt: 'morph',
+      imageRef: { dataUrl: DATA_URL },
+      lastFrameRef: { dataUrl: LAST_URL },
+      extraImageRefs: [{ dataUrl: REF_URL }],
+    });
+    const content = built.body.content as any[];
+    expect(content[1]).toEqual({ type: 'image_url', image_url: { url: DATA_URL }, role: 'first_frame' });
+    expect(content[2]).toEqual({ type: 'image_url', image_url: { url: LAST_URL }, role: 'last_frame' });
+    expect(content[3]).toEqual({ type: 'image_url', image_url: { url: REF_URL }, role: 'reference_image' });
+  });
+
   it('resolution: token in → no-op; pixel size → snapped to token', () => {
     // aihubmix-video supplies a token (480p/720p) → unchanged.
     expect(buildVideoRequest(SEEDANCE, { prompt: 'x', resolution: '720p' }).body.resolution).toBe('720p');
@@ -210,6 +227,21 @@ describe('buildVideoRequest — dashscope family (happyhorse) [verified, unchang
     expect((built.body.input as any).prompt).toBe('a sunset');
     expect((built.body.parameters as any).resolution).toBe('720P');
   });
+
+  it('flf2v: appends a last_frame media entry after first_frame', () => {
+    const LAST_URL = 'data:image/png;base64,LAST';
+    const built = buildVideoRequest(HAPPYHORSE, {
+      prompt: 'morph',
+      durationSeconds: 5,
+      size: '1280x720',
+      imageRef: { dataUrl: DATA_URL },
+      lastFrameRef: { dataUrl: LAST_URL },
+    });
+    expect((built.body.input as any).media).toEqual([
+      { type: 'first_frame', url: DATA_URL },
+      { type: 'last_frame', url: LAST_URL },
+    ]);
+  });
 });
 
 describe('buildVideoRequest — veo family [verified, unchanged]', () => {
@@ -238,10 +270,23 @@ describe('buildVideoRequest — veo family [verified, unchanged]', () => {
     expect(built.body.size).toBe('1280x720');
   });
 
-  it('t2v-only: never emits input_reference even if a reference image is passed', () => {
+  it('i2v: emits input_reference (gateway maps it to a referenceImages asset)', () => {
     const built = buildVideoRequest(VEO, { prompt: 'clip', durationSeconds: 6, imageRef: { dataUrl: DATA_URL } });
-    expect(built.body.input_reference).toBeUndefined();
+    expect(built.hasReference).toBe(true);
+    expect(built.body.input_reference).toBe(DATA_URL);
     expect(built.body.seconds).toBe(6);
+  });
+
+  it('i2v: ignores lastFrameRef/extras — veo takes only a single reference asset', () => {
+    const built = buildVideoRequest(VEO, {
+      prompt: 'clip',
+      imageRef: { dataUrl: DATA_URL },
+      lastFrameRef: { dataUrl: 'data:image/png;base64,LAST' },
+      extraImageRefs: [{ dataUrl: 'data:image/png;base64,REF' }],
+    });
+    expect(built.body.input_reference).toBe(DATA_URL);
+    // no first_frame/last_frame plumbing for veo
+    expect(JSON.stringify(built.body)).not.toContain('last_frame');
   });
 });
 

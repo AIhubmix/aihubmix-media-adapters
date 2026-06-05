@@ -23,6 +23,13 @@ export interface VideoBuildInput {
   ratio?: string;
   /** First-frame reference image as a data URL (data:image/...;base64,...). */
   imageRef?: { dataUrl: string };
+  /**
+   * Last-frame reference image as a data URL (FLF2V). Emitted only by families
+   * that support a tail frame (seedance `role:last_frame`, dashscope
+   * `media[type:last_frame]`); ignored by generic/veo. A last frame implies a
+   * first frame — set `imageRef` too so the request routes to the i2v wire model.
+   */
+  lastFrameRef?: { dataUrl: string };
   /** Additional reference images (seedance reference_image / extras). */
   extraImageRefs?: Array<{ dataUrl: string }>;
   /**

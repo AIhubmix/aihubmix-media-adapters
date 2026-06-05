@@ -21,11 +21,20 @@ const WAN_SIZES_BASE = [
   '1920x1080', '1080x1920', '1440x1440', '1632x1248', '1248x1632',
 ];
 const WAN25_SIZES = [...WAN_SIZES_BASE, '832x480', '480x832', '624x624'];
+// Wan sizes aligned to OpenRouter's videos/models size enums. wan-2.6 lists 4
+// sizes; wan-2.7 lists 10 (adds square/4:3/portrait variants). wan2.2 keeps the
+// full WAN_SIZES_BASE since OR has no wan-2.2 entry to tighten against.
+const WAN_SIZES_OR = ['1280x720', '720x1280', '1920x1080', '1080x1920'];
+const WAN27_SIZES_OR = [
+  '1280x720', '720x1280', '1920x1080', '1080x1920', '720x720',
+  '1080x1080', '960x720', '720x960', '1440x1080', '1080x1440',
+];
 const JIMENG_SIZES = [
   '16:9', '9:16', '4:3', '3:4', '1:1', '21:9',
   '1920x1080', '1080x1920', '1664x1248', '1248x1664', '1440x1440', '2176x928',
 ];
-const SEEDANCE_ASPECTS = ['16:9', '9:16', '4:3', '3:4', '21:9', '1:1'];
+// Aligned to OpenRouter's seedance aspect enum (adds 9:21 vs the prior 6).
+const SEEDANCE_ASPECTS = ['16:9', '9:16', '4:3', '3:4', '21:9', '1:1', '9:21'];
 
 export const AIHUBMIX_VIDEO_SEED: ModelCapability[] = [
   // ── ByteDance SeeDance (火山 Ark) — multimodal content[] array ───────────
@@ -37,9 +46,9 @@ export const AIHUBMIX_VIDEO_SEED: ModelCapability[] = [
     mediaType: 'video',
     family: 'seedance',
     caps: ['t2v', 'i2v'],
-    supportedFrameImages: ['first_frame', 'reference_image'],
+    supportedFrameImages: ['first_frame', 'last_frame', 'reference_image'],
     supportedAspectRatios: SEEDANCE_ASPECTS,
-    supportedResolutions: ['480p', '720p'],
+    supportedResolutions: ['480p', '720p', '1080p'],
     durationRange: { min: 4, max: 15 },
     generateAudio: true,
     seed: true,
@@ -54,7 +63,7 @@ export const AIHUBMIX_VIDEO_SEED: ModelCapability[] = [
     mediaType: 'video',
     family: 'seedance',
     caps: ['t2v', 'i2v'],
-    supportedFrameImages: ['first_frame', 'reference_image'],
+    supportedFrameImages: ['first_frame', 'last_frame', 'reference_image'],
     supportedAspectRatios: SEEDANCE_ASPECTS,
     supportedResolutions: ['480p', '720p'],
     durationRange: { min: 4, max: 15 },
@@ -76,6 +85,8 @@ export const AIHUBMIX_VIDEO_SEED: ModelCapability[] = [
     supportedFrameImages: ['first_frame'],
     supportedSizes: ['720x1280', '1280x720', '1024x1792', '1792x1024'],
     supportedDurations: [4, 8, 12],
+    // AIHubMix gateway wants `seconds` as a string enum ('4'/'8'/'12').
+    secondsFormat: 'string',
     xSource: { from: 'avs://openai/official', authority: 'official' },
   },
   {
@@ -86,9 +97,19 @@ export const AIHUBMIX_VIDEO_SEED: ModelCapability[] = [
     mediaType: 'video',
     family: 'generic',
     caps: ['t2v', 'i2v'],
+    // OR marks sora-2-pro frame_images null; first_frame kept — OpenAI does
+    // support an input_reference acting as the first frame (verified).
     supportedFrameImages: ['first_frame'],
+    // sizes follow OpenAI's OFFICIAL sora-2-pro enum (gateway is pure passthrough,
+    // so OpenAI is the real validator). NOTE: this DIVERGES from OR, which lists
+    // 1080x1920/1920x1080 instead of the official 1024x1792/1792x1024.
+    supportedResolutions: ['720p', '1024p', '1080p'],
+    supportedAspectRatios: ['16:9', '9:16'],
     supportedSizes: ['720x1280', '1280x720', '1024x1792', '1792x1024'],
-    supportedDurations: [4, 8, 12],
+    supportedDurations: [4, 8, 12, 16, 20],
+    generateAudio: true,
+    // AIHubMix gateway wants `seconds` as a string enum ('4'/'8'/'12').
+    secondsFormat: 'string',
     xSource: { from: 'avs://openai/official', authority: 'official' },
   },
 
@@ -105,8 +126,14 @@ export const AIHUBMIX_VIDEO_SEED: ModelCapability[] = [
     family: 'generic',
     caps: ['t2v', 'i2v'],
     supportedFrameImages: ['first_frame'],
-    supportedSizes: WAN_SIZES_BASE,
+    supportedResolutions: ['480p', '720p', '1080p'],
+    supportedAspectRatios: ['16:9', '9:16'],
+    supportedSizes: WAN_SIZES_OR,
+    // Official DashScope wan i2v accepts any integer 2–15s; the gateway is pure
+    // passthrough (no clamp), so we follow OFFICIAL rather than OR's [5,10].
     durationRange: { min: 2, max: 15 },
+    seed: true,
+    generateAudio: true,
   },
   {
     id: 'wan2.6-i2v',
@@ -115,6 +142,70 @@ export const AIHUBMIX_VIDEO_SEED: ModelCapability[] = [
     vendorGroup: 'Alibaba',
     mediaType: 'video',
     family: 'generic',
+    caps: ['i2v'],
+    supportedFrameImages: ['first_frame'],
+    supportedResolutions: ['480p', '720p', '1080p'],
+    supportedAspectRatios: ['16:9', '9:16'],
+    supportedSizes: WAN_SIZES_OR,
+    // Official 2–15s; gateway passthrough → follow official (see wan2.6-t2v).
+    durationRange: { min: 2, max: 15 },
+    seed: true,
+    generateAudio: true,
+  },
+  // wan2.7: t2v is generic (flat input_reference), but i2v is DashScope-native
+  // (input.media + parameters) — family is left UNSET so deriveVideoFamily routes
+  // each wire name correctly (wan2.7-t2v→generic, wan2.7-i2v→dashscope).
+  {
+    id: 'wan2.7-t2v',
+    apiModel: 'wan2.7-t2v',
+    apiModelI2V: 'wan2.7-i2v',
+    label: 'Wan 2.7',
+    vendorGroup: 'Alibaba',
+    mediaType: 'video',
+    caps: ['t2v', 'i2v'],
+    supportedFrameImages: ['first_frame', 'last_frame'],
+    supportedResolutions: ['480p', '720p', '1080p'],
+    supportedAspectRatios: ['16:9', '9:16', '1:1', '4:3', '3:4'],
+    supportedSizes: WAN27_SIZES_OR,
+    // Official 2–15s; gateway passthrough → follow official (not OR's 2–10).
+    durationRange: { min: 2, max: 15 },
+    seed: true,
+    generateAudio: true,
+  },
+  {
+    id: 'wan2.7-i2v',
+    apiModel: 'wan2.7-i2v',
+    label: 'Wan 2.7 (I2V)',
+    vendorGroup: 'Alibaba',
+    mediaType: 'video',
+    caps: ['i2v'],
+    supportedFrameImages: ['first_frame', 'last_frame'],
+    supportedResolutions: ['480p', '720p', '1080p'],
+    supportedAspectRatios: ['16:9', '9:16', '1:1', '4:3', '3:4'],
+    supportedSizes: WAN27_SIZES_OR,
+    // Official 2–15s; gateway passthrough → follow official (not OR's 2–10).
+    durationRange: { min: 2, max: 15 },
+    seed: true,
+    generateAudio: true,
+  },
+  {
+    id: 'wan2.2-t2v-plus',
+    apiModel: 'wan2.2-t2v-plus',
+    apiModelI2V: 'wan2.2-i2v-plus',
+    label: 'Wan 2.2 Plus',
+    vendorGroup: 'Alibaba',
+    mediaType: 'video',
+    caps: ['t2v', 'i2v'],
+    supportedFrameImages: ['first_frame'],
+    supportedSizes: WAN_SIZES_BASE,
+    durationRange: { min: 2, max: 15 },
+  },
+  {
+    id: 'wan2.2-i2v-plus',
+    apiModel: 'wan2.2-i2v-plus',
+    label: 'Wan 2.2 Plus (I2V)',
+    vendorGroup: 'Alibaba',
+    mediaType: 'video',
     caps: ['i2v'],
     supportedFrameImages: ['first_frame'],
     supportedSizes: WAN_SIZES_BASE,
@@ -204,9 +295,11 @@ export const AIHUBMIX_VIDEO_SEED: ModelCapability[] = [
   },
 
   // ── Google Veo — own `veo` family (Gemini predictLongRunning shim) ───────
-  // open-design gateway-verified; TEXT-TO-VIDEO ONLY (every reference form is
-  // rejected by the shim). Not currently in aihubmix-video's catalogue but kept
-  // for the open-design consumer. Flat body, seconds NUMBER, size only; 4/6/8s.
+  // Flat body, seconds NUMBER, size only; 4/6/8s. i2v is supported via a single
+  // reference image: the gateway maps `input_reference` → Veo `referenceImages`
+  // ({image, referenceType:'asset'}). This is an ASSET/style reference, NOT the
+  // native `image`(first_frame)/`lastFrame`(last_frame) interpolation — the
+  // gateway does not expose those — so the frame role is `reference_image`.
   {
     id: 'veo-3.1-generate-preview',
     apiModel: 'veo-3.1-generate-preview',
@@ -214,8 +307,13 @@ export const AIHUBMIX_VIDEO_SEED: ModelCapability[] = [
     vendorGroup: 'Google',
     mediaType: 'video',
     family: 'veo',
-    caps: ['t2v'],
+    caps: ['t2v', 'i2v'],
+    supportedFrameImages: ['reference_image'],
+    supportedResolutions: ['720p', '1080p', '4K'],
+    supportedAspectRatios: ['16:9', '9:16'],
     supportedDurations: [4, 6, 8],
+    seed: true,
+    generateAudio: true,
   },
   {
     id: 'veo-3.1-lite-generate-preview',
@@ -224,7 +322,12 @@ export const AIHUBMIX_VIDEO_SEED: ModelCapability[] = [
     vendorGroup: 'Google',
     mediaType: 'video',
     family: 'veo',
-    caps: ['t2v'],
+    caps: ['t2v', 'i2v'],
+    supportedFrameImages: ['reference_image'],
+    supportedResolutions: ['720p', '1080p'],
+    supportedAspectRatios: ['16:9', '9:16'],
     supportedDurations: [4, 6, 8],
+    seed: true,
+    generateAudio: true,
   },
 ];
