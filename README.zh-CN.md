@@ -55,6 +55,8 @@ AIHubMix 是一个**透传**网关:每个上游厂商保留各自的原生请求
 | duration | 4–15s | clamp 2–15 | 4–15 | ✓ |
 | seed / audio | 支持 / 支持 | 透传 | true / true | ✓ |
 
+> **SeeDance 1.x**(1.0 Pro / 1.0 Pro Fast / 1.5 Pro):**仅** `first_frame`,不支持 `reference_image`。上游把 `reference_image` 映射为 `r2v`,而 1.x 不支持 r2v(`task_type r2v does not support model …`),只有 2.0 支持 r2v。网关与 OR 都不区分这个按版本的约束,本包通过 `supportedFrameImages: ['first_frame']` 表达。
+
 ### Sora 2 Pro
 
 | 字段 | 官方 | 网关 | OR | 状态 |
@@ -65,6 +67,8 @@ AIHubMix 是一个**透传**网关:每个上游厂商保留各自的原生请求
 | frames | `input_reference` = 首帧 | 透传 | null | ✓ `first_frame`(OR 未纳入帧枚举) |
 | seed | 不支持 | — | false | ✓ |
 | audio | 支持 | 透传 | true | ✓ |
+
+> **Sora i2v 线上形态**:`input_reference` 必须是**对象** `{ image_url: <url> }` —— 传裸字符串会被 OpenAI/网关 400(`expected an object, but got a string`)。其它 `generic` 厂商(wan2.x)用裸字符串。本包通过 `referenceAsObject` 能力字段选择形态(网关和 OR 都不表达这一点,属线上格式差异)。
 
 ### Wan 2.6 / 2.7
 

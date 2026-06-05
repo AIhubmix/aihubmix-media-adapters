@@ -81,6 +81,8 @@ Legend: **✓** aligned in this package; **⚠️** has a difference/limitation 
 | duration | 4–15s | clamp 2–15 | 4–15 | ✓ |
 | seed / audio | yes / yes | passthrough | true / true | ✓ |
 
+> **SeeDance 1.x** (1.0 Pro / 1.0 Pro Fast / 1.5 Pro): `first_frame` **only** — no `reference_image`. Upstream maps `reference_image`→`r2v`, which 1.x rejects (`task_type r2v does not support model …`); only 2.0 supports r2v. The gateway and OR do not distinguish this per-version constraint — it's enforced here via `supportedFrameImages: ['first_frame']`.
+
 ### Sora 2 Pro
 
 | Field | Official | Gateway | OR | Status |
@@ -91,6 +93,8 @@ Legend: **✓** aligned in this package; **⚠️** has a difference/limitation 
 | frames | `input_reference` = first frame | passthrough | null | ✓ `first_frame` (OR omits it from the frame enum) |
 | seed | not supported | — | false | ✓ |
 | audio | yes | passthrough | true | ✓ |
+
+> **Sora i2v wire shape**: `input_reference` must be an **object** `{ image_url: <url> }` — OpenAI/gateway returns 400 (`expected an object, but got a string`) on a bare string. Other `generic` vendors (wan2.x) take a bare string. The package selects the shape via the `referenceAsObject` capability flag (neither the gateway nor OR expresses this — it's a wire-format difference).
 
 ### Wan 2.6 / 2.7
 
