@@ -195,15 +195,16 @@ describe('parity — aihubmix-video create-task body shapes', () => {
     expect(body.duration).toBe(15);
   });
 
-  it('sora-2 t2v (number seconds, size passthrough, no aspect_ratio/input_reference)', () => {
+  it('sora-2 t2v (STRING seconds, size passthrough, no aspect_ratio/input_reference)', () => {
     const body = buildBody(CONFIGS['sora-2']!, { prompt: 'sunset', seconds: 8, size: '1280x720' });
-    expect(body).toEqual({ model: 'sora-2', prompt: 'sunset', seconds: 8, size: '1280x720' });
+    // Sora seconds is a string enum on the AIHubMix gateway; forced by wire name.
+    expect(body).toEqual({ model: 'sora-2', prompt: 'sunset', seconds: '8', size: '1280x720' });
   });
 
-  it('sora-2 i2v (input_reference as OBJECT { image_url }, no model switch — sora has no apiModelI2V)', () => {
+  it('sora-2 i2v (input_reference OBJECT { image_url } + string seconds, no model switch)', () => {
     const body = buildBody(CONFIGS['sora-2']!, { prompt: 'clip', seconds: 4, size: '720x1280', finalReference: DATA });
-    // Sora requires the object form (a bare string 400s); forced by wire name.
-    expect(body).toEqual({ model: 'sora-2', prompt: 'clip', seconds: 4, size: '720x1280', input_reference: { image_url: DATA } });
+    // Sora requires the object form (a bare string 400s) + string seconds; both forced by wire name.
+    expect(body).toEqual({ model: 'sora-2', prompt: 'clip', seconds: '4', size: '720x1280', input_reference: { image_url: DATA } });
   });
 
   it('wan2.5 i2v (switches to apiModelI2V + flat input_reference)', () => {
@@ -232,7 +233,7 @@ describe('parity — aihubmix-video create-task body shapes', () => {
     expect(body).toEqual({
       model: 'sora-2',
       prompt: 'x',
-      seconds: 8,
+      seconds: '8',
       size: '1280x720',
       quality: 'high',
       some_vendor_flag: true,

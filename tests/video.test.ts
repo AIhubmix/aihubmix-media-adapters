@@ -285,14 +285,19 @@ describe('buildVideoRequest — veo family [verified, unchanged]', () => {
 
 describe('buildVideoRequest — generic family (sora + wan2.x + jimeng)', () => {
   it('default: seconds is a NUMBER; size passes through; aspect_ratio dropped; no input_reference', () => {
-    const built = buildVideoRequest(SORA, {
+    // Non-sora generic cap → number seconds (Sora is wire-name-forced to a string).
+    const GENERIC: ModelCapability = {
+      id: 'wan2.5-t2v-preview', apiModel: 'wan2.5-t2v-preview', mediaType: 'video',
+      family: 'generic', caps: ['t2v', 'i2v'], supportedDurations: [4, 8, 12], supportedSizes: ['720x1280', '1280x720'],
+    };
+    const built = buildVideoRequest(GENERIC, {
       prompt: 'a sunset',
-      durationSeconds: 5, // sora 4/8/12 → 4
+      durationSeconds: 5, // 4/8/12 → 4
       aspectRatio: '16:9', // must NOT reach the wire
       size: '1280x720',
     });
     expect(built.family).toBe('generic');
-    expect(built.body).toMatchObject({ model: 'sora-2', prompt: 'a sunset', seconds: 4, size: '1280x720' });
+    expect(built.body).toMatchObject({ model: 'wan2.5-t2v-preview', prompt: 'a sunset', seconds: 4, size: '1280x720' });
     expect(typeof built.body.seconds).toBe('number');
     expect(built.body.aspect_ratio).toBeUndefined();
     expect(built.body.input_reference).toBeUndefined();
@@ -363,20 +368,24 @@ describe('buildVideoRequest — generic family (sora + wan2.x + jimeng)', () => 
     expect(w.body.input_reference).toBe(DATA_URL);
   });
 
-  it('i2v: Sora object form is forced by wire name even when the injected cap lacks referenceAsObject', () => {
-    // A consumer that injects its OWN sora capability (no referenceAsObject flag)
-    // must still get the object form — Sora's requirement is an upstream hard fact.
+  it('Sora wire-name fallback: object input_reference + string seconds even when the injected cap sets NEITHER flag', () => {
+    // A consumer that injects its OWN sora capability (no referenceAsObject, no
+    // secondsFormat) must still get both Sora hard requirements — they are
+    // upstream facts, not per-deployment choices.
     const soraInjected: ModelCapability = {
       id: 'sora-2', apiModel: 'sora-2', mediaType: 'video', family: 'generic',
-      caps: ['t2v', 'i2v'], secondsFormat: 'string', // no referenceAsObject
+      caps: ['t2v', 'i2v'], supportedDurations: [4, 8, 12], // NO referenceAsObject, NO secondsFormat
     };
     const s = buildVideoRequest(soraInjected, { prompt: 'x', durationSeconds: 8, imageRef: { dataUrl: DATA_URL } });
     expect(s.body.input_reference).toEqual({ image_url: DATA_URL });
-    // a non-sora generic cap without the flag stays a bare string
+    expect(s.body.seconds).toBe('8'); // string, forced by wire name
+    // a non-sora generic cap without the flags stays a bare string + number seconds
     const wan: ModelCapability = {
       id: 'wan2.6-i2v', apiModel: 'wan2.6-i2v', mediaType: 'video', family: 'generic', caps: ['i2v'],
     };
-    expect(typeof buildVideoRequest(wan, { prompt: 'x', imageRef: { dataUrl: DATA_URL } }).body.input_reference).toBe('string');
+    const w = buildVideoRequest(wan, { prompt: 'x', durationSeconds: 5, imageRef: { dataUrl: DATA_URL } });
+    expect(typeof w.body.input_reference).toBe('string');
+    expect(w.body.seconds).toBe(5); // number
   });
 });
 
@@ -394,6 +403,21 @@ describe('buildVideoRequest — apiModelI2V + passthrough', () => {
     expect(buildVideoRequest(cap, { prompt: 'x', imageRef: { dataUrl: DATA_URL } }).wireModel).toBe(
       'wan2.5-i2v-preview',
     );
+  });
+
+  it('auto-derives the i2v wire name from a -t2v base when apiModelI2V is missing (injected caps)', () => {
+    // Consumer injects a cap without apiModelI2V (live catalogue omits it).
+    const wan: ModelCapability = {
+      id: 'wan2.7-t2v', apiModel: 'wan2.7-t2v', mediaType: 'video', caps: ['t2v', 'i2v'],
+    };
+    const t2v = buildVideoRequest(wan, { prompt: 'x' });
+    expect(t2v.wireModel).toBe('wan2.7-t2v');
+    const i2v = buildVideoRequest(wan, { prompt: 'x', imageRef: { dataUrl: DATA_URL } });
+    expect(i2v.wireModel).toBe('wan2.7-i2v'); // derived -t2v → -i2v
+    expect(i2v.family).toBe('dashscope'); // …and the derived name drives family routing
+    // sora has no -t2v segment → i2v uses the same name (no spurious rewrite)
+    const sora: ModelCapability = { id: 'sora-2', apiModel: 'sora-2', mediaType: 'video', family: 'generic', caps: ['t2v', 'i2v'] };
+    expect(buildVideoRequest(sora, { prompt: 'x', imageRef: { dataUrl: DATA_URL } }).wireModel).toBe('sora-2');
   });
 
   it('merges extraBodyDefaults and only whitelisted passthrough keys', () => {

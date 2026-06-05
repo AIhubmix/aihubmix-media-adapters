@@ -25,7 +25,15 @@ import type {
 
 /** Resolve the upstream model name: i2v variant when a reference image is present. */
 export function resolveWireModel(cap: ModelCapability, hasReference: boolean): string {
-  return hasReference && cap.apiModelI2V ? cap.apiModelI2V : cap.apiModel;
+  if (!hasReference) return cap.apiModel;
+  if (cap.apiModelI2V) return cap.apiModelI2V;
+  // Out-of-box i2v routing: vendors whose i2v is a distinct upstream model use a
+  // `-t2v`/`-i2v` name pair (wan*, happyhorse*). Derive the i2v name from a `-t2v`
+  // base so i2v works even when the injected capability omits apiModelI2V (the
+  // live catalogue only returns id/label/type). No-op for models whose i2v uses
+  // the same name (sora / seedance — no `-t2v` segment). Also lets the wan2.7-i2v
+  // dashscope family detection key off the resolved name.
+  return cap.apiModel.includes('-t2v') ? cap.apiModel.replace('-t2v', '-i2v') : cap.apiModel;
 }
 
 /** Derive the request family from the resolved upstream model name (or explicit override). */
@@ -262,13 +270,16 @@ export function buildVideoRequest(cap: ModelCapability, input: VideoBuildInput):
     // Generic OpenAI-style /videos (sora / wan2.x / jimeng / …). The size hint is
     // `size` — NOT `aspect_ratio`, which Sora rejects with "Unknown parameter:
     // 'aspect_ratio'", so it is never forwarded (aihubmix-video's generic models
-    // don't send one either). `seconds` form is injected via cap.secondsFormat
-    // (Sora's enum is a string on some gateways; others take a number; default
-    // number). Reference rides as input_reference.
+    // don't send one either). `seconds` form comes from cap.secondsFormat (others
+    // take a number; default number), BUT is also force-detected by wire name for
+    // Sora: the string enum is a Sora upstream hard fact, so it must hold even
+    // when the caller injects its own capabilities without secondsFormat set.
+    // Reference rides as input_reference.
+    const secondsAsString = cap.secondsFormat === 'string' || /^sora/i.test(wireModel);
     body = {
       model: wireModel,
       prompt: input.prompt,
-      seconds: cap.secondsFormat === 'string' ? String(seconds) : seconds,
+      seconds: secondsAsString ? String(seconds) : seconds,
     };
     // Snap only when a size was supplied. No-op when it's already a declared
     // supported size (aihubmix-video); corrective for an aspect-derived pixel

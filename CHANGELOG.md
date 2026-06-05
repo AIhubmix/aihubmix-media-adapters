@@ -4,6 +4,25 @@ All notable changes to this package are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/) and the project adheres to
 [Semantic Versioning](https://semver.org/).
 
+## 0.2.2
+
+Out-of-the-box correctness: wire requirements that are upstream hard facts no
+longer depend on the caller injecting the right capability flag.
+
+### Bug fixes
+
+- **Sora `seconds` sent as a number when the injected cap lacked
+  `secondsFormat`.** Like the 0.2.1 `input_reference` fix, the string-enum form is
+  now force-detected by wire name (`sora*`), so Sora always emits `seconds` as a
+  string regardless of capability source. `secondsFormat` remains an explicit
+  override for other vendors.
+- **i2v used the t2v model name when the injected cap omitted `apiModelI2V`.**
+  `resolveWireModel` now derives the i2v name from a `-t2v` base
+  (`wan2.6-t2v`→`wan2.6-i2v`, `happyhorse-1.0-t2v`→`-i2v`) when `apiModelI2V` is
+  absent, so i2v routing (and the wan2.7-i2v dashscope family detection) works
+  out of the box. Explicit `apiModelI2V` still wins; no-op for names without a
+  `-t2v` segment (sora / seedance use the same name for i2v).
+
 ## 0.2.1
 
 ### Bug fixes
