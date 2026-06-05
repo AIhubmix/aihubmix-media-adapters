@@ -31,7 +31,13 @@ AIHubMix 是一个**透传**网关:每个上游厂商保留各自的原生请求
 - `supportedDurations: number[]` —— 枚举;`snapDuration` 取最近(并列取更短)。
 - `durationRange: { min, max }` —— 连续区间;`snapDuration` 钳制到区间(如 SeeDance 4–15s 保留 15s)。设了 `supportedDurations` 时忽略。
 - `supportedSizes: string[]` —— 声明的尺寸(WxH 和/或比例 token);`snapSizeToSupported` 命中则原样返回,否则按朝向映射(仅 `generic`)。
-- `secondsFormat: 'string' | 'number'` —— `generic` 的 `seconds` 线上形态(Sora 在部分网关是字符串枚举;默认 `'number'`)。
+- `secondsFormat: 'string' | 'number'` —— `generic` 的 `seconds` 线上形态(默认 `'number'`)。Sora 的字符串枚举还会**按 wire 名兜底识别**,即使不设此 flag 也成立。
+
+**开箱即用的线上保证**(上游硬性事实,本包按 wire 名兜底,消费方注入自己的目录、即使漏设对应 flag 也成立):
+
+- **Sora `input_reference`** 一律发对象 `{ image_url }`(字符串会 400);`referenceAsObject` 仅作其它厂商的显式开关。
+- **Sora `seconds`** 一律发字符串枚举。
+- **i2v 模型名**在缺 `apiModelI2V` 时从 `-t2v` 推导(如 `wan2.6-t2v`→`wan2.6-i2v`、`happyhorse-1.0-t2v`→`-i2v`);显式 `apiModelI2V` 优先;无 `-t2v` 段的不变(sora / seedance)。
 
 ## 视频模型字段能力对照(官方 / 网关 / OR)
 
@@ -68,7 +74,7 @@ AIHubMix 是一个**透传**网关:每个上游厂商保留各自的原生请求
 | seed | 不支持 | — | false | ✓ |
 | audio | 支持 | 透传 | true | ✓ |
 
-> **Sora i2v 线上形态**:`input_reference` 必须是**对象** `{ image_url: <url> }` —— 传裸字符串会被 OpenAI/网关 400(`expected an object, but got a string`)。其它 `generic` 厂商(wan2.x)用裸字符串。本包通过 `referenceAsObject` 能力字段选择形态(网关和 OR 都不表达这一点,属线上格式差异)。
+> **Sora i2v 线上形态**:`input_reference` 必须是**对象** `{ image_url: <url> }` —— 传裸字符串会被 OpenAI/网关 400(`expected an object, but got a string`)。其它 `generic` 厂商(wan2.x)用裸字符串。本包对 Sora **按 wire 名自动发对象**,消费方注入自己的目录也成立;`referenceAsObject` 仅作其它厂商的显式开关。(网关和 OR 都不表达这一点,属线上格式差异。)
 
 ### Wan 2.6 / 2.7
 

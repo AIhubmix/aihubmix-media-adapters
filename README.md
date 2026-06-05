@@ -57,7 +57,15 @@ Normalisation is driven by data on the capability, not hardcoded per model:
 - `supportedDurations: number[]` — enum; `snapDuration` picks the nearest (ties → shorter).
 - `durationRange: { min, max }` — continuous range; `snapDuration` clamps to it (e.g. SeeDance 4–15s keeps 15s). Ignored when `supportedDurations` is set.
 - `supportedSizes: string[]` — declared sizes (WxH and/or ratio tokens); `snapSizeToSupported` returns a match unchanged, else maps by orientation (`generic` only).
-- `secondsFormat: 'string' | 'number'` — wire form of `seconds` for `generic` (Sora's enum is a string on some gateways; default `'number'`).
+- `secondsFormat: 'string' | 'number'` — wire form of `seconds` for `generic` (default `'number'`). Sora's string enum is also **force-detected by wire name**, so it holds even without this flag.
+
+**Out-of-the-box wire guarantees** (upstream hard facts the package enforces by wire
+name, so they hold even when a consumer injects its own capabilities without the
+matching flag):
+
+- **Sora `input_reference`** is emitted as an object `{ image_url }` (string 400s); `referenceAsObject` is an explicit opt-in for any other vendor.
+- **Sora `seconds`** is emitted as a string enum.
+- **i2v wire name** is derived from a `-t2v` base (e.g. `wan2.6-t2v`→`wan2.6-i2v`, `happyhorse-1.0-t2v`→`-i2v`) when `apiModelI2V` is absent; explicit `apiModelI2V` still wins; no-op for names without a `-t2v` segment (sora / seedance).
 
 ## Model field capabilities: Official / Gateway / OR
 
@@ -94,7 +102,7 @@ Legend: **✓** aligned in this package; **⚠️** has a difference/limitation 
 | seed | not supported | — | false | ✓ |
 | audio | yes | passthrough | true | ✓ |
 
-> **Sora i2v wire shape**: `input_reference` must be an **object** `{ image_url: <url> }` — OpenAI/gateway returns 400 (`expected an object, but got a string`) on a bare string. Other `generic` vendors (wan2.x) take a bare string. The package selects the shape via the `referenceAsObject` capability flag (neither the gateway nor OR expresses this — it's a wire-format difference).
+> **Sora i2v wire shape**: `input_reference` must be an **object** `{ image_url: <url> }` — OpenAI/gateway returns 400 (`expected an object, but got a string`) on a bare string. Other `generic` vendors (wan2.x) take a bare string. The package emits the object for Sora **automatically (force-detected by wire name)**, so it works even when a consumer injects its own capabilities; `referenceAsObject` is an explicit opt-in for any other vendor. (Neither the gateway nor OR expresses this — it's a wire-format difference.)
 
 ### Wan 2.6 / 2.7
 
