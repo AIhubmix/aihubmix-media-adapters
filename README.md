@@ -1,5 +1,7 @@
 # @aihubmix/media-adapters
 
+**English** | [中文](./README.zh-CN.md)
+
 Pure, isomorphic interpreter that maps a **unified media request** to each
 vendor's **native AIHubMix request shape**. No transport (fetch / auth / poll /
 download / storage) and no proprietary model data baked in — model capabilities
@@ -57,62 +59,62 @@ Normalisation is driven by data on the capability, not hardcoded per model:
 - `supportedSizes: string[]` — declared sizes (WxH and/or ratio tokens); `snapSizeToSupported` returns a match unchanged, else maps by orientation (`generic` only).
 - `secondsFormat: 'string' | 'number'` — wire form of `seconds` for `generic` (Sora's enum is a string on some gateways; default `'number'`).
 
-## 视频模型字段能力对照(官方 / 网关 / OR)
+## Model field capabilities: Official / Gateway / OR
 
-本表对照三处来源的字段能力,作为接入与前端取值的依据:
+Compares field capabilities across three sources, as the basis for integration and front-end value selection:
 
-- **官方** — 各厂商官方 API 的真实能力(火山方舟 Ark / 阿里云百炼 DashScope / Google Veo / OpenAI Sora)。
-- **网关** — AIHubMix 网关(转发改写后)实际支持的能力。
-- **OR** — OpenRouter `GET /api/v1/videos/models` 公布的字段枚举。
+- **Official** — each vendor's real official API capability (Volcengine Ark / Alibaba Bailian DashScope / Google Veo / OpenAI Sora).
+- **Gateway** — what the AIHubMix gateway actually supports after request rewriting/forwarding.
+- **OR** — the field enums published by OpenRouter `GET /api/v1/videos/models`.
 
-网关将 OpenAI 风格请求重写为各厂商原生格式:通常官方能力最宽,网关因改写或未接而收窄,OR 为另一套抽象(可能与官方不一致)。本包字段取值**以官方为准、兼顾网关实际行为**。
+The gateway rewrites OpenAI-style requests into each vendor's native format: Official is usually the widest, the Gateway narrows it (rewriting or unimplemented features), and OR is a separate abstraction that may disagree with Official. This package's field values **follow Official, while accounting for actual Gateway behavior**.
 
-图例:**✓** 本包已对齐;**⚠️** 存在差异或限制(见说明);`✗` 不支持。
+Legend: **✓** aligned in this package; **⚠️** has a difference/limitation (see notes); `✗` not supported.
 
 ### SeeDance 2.0 / 2.0 Fast
 
-| 字段 | 官方 | 网关 | OR | 状态 |
+| Field | Official | Gateway | OR | Status |
 |---|---|---|---|---|
-| frames | first_frame + last_frame + reference_image (+ reference_video) | 同官方(`content[].role`) | first_frame, last_frame | ✓ 取官方全集(保留 `reference_image`) |
-| resolution | 480p / 720p / 1080p | 由 size 短边推 480p/720p/1080p | 2.0:480/720/1080;Fast:480/720 | ✓ |
-| 比例 | 16:9 / 9:16 / 1:1 … | 吸附表无 `9:21` | 含 `9:21` | ⚠️ `9:21` 仅 `ratio` 直传;走 size 会被约分成 `3:7` |
+| frames | first_frame + last_frame + reference_image (+ reference_video) | same as Official (`content[].role`) | first_frame, last_frame | ✓ takes Official superset (keeps `reference_image`) |
+| resolution | 480p / 720p / 1080p | derived from size short side → 480p/720p/1080p | 2.0: 480/720/1080; Fast: 480/720 | ✓ |
+| aspect | 16:9 / 9:16 / 1:1 … | snap table lacks `9:21` | includes `9:21` | ⚠️ `9:21` only via direct `ratio`; via size it GCD-reduces to `3:7` |
 | duration | 4–15s | clamp 2–15 | 4–15 | ✓ |
-| seed / audio | 支持 / 支持 | 透传 | true / true | ✓ |
+| seed / audio | yes / yes | passthrough | true / true | ✓ |
 
 ### Sora 2 Pro
 
-| 字段 | 官方 | 网关 | OR | 状态 |
+| Field | Official | Gateway | OR | Status |
 |---|---|---|---|---|
-| sizes | 720x1280 / 1280x720 / 1024x1792 / 1792x1024 | 纯透传 | 1280x720 / 720x1280 / 1080x1920 / 1920x1080 | ✓ 按官方(**与 OR 不同**) |
-| resolution | 720p / 1024p / 1080p | 透传 | 720p / 1080p | ✓ 按官方(含 `1024p`) |
-| durations | 4 / 8 / 12(新指南至 16/20) | 透传 | 4 / 8 / 12 / 16 / 20 | ✓ 取扩展集 |
-| frames | `input_reference` = 首帧 | 透传 | null | ✓ `first_frame`(OR 未纳入帧枚举) |
-| seed | 不支持 | — | false | ✓ |
-| audio | 支持 | 透传 | true | ✓ |
+| sizes | 720x1280 / 1280x720 / 1024x1792 / 1792x1024 | pure passthrough | 1280x720 / 720x1280 / 1080x1920 / 1920x1080 | ✓ follows Official (**differs from OR**) |
+| resolution | 720p / 1024p / 1080p | passthrough | 720p / 1080p | ✓ follows Official (incl. `1024p`) |
+| durations | 4 / 8 / 12 (newer guide up to 16/20) | passthrough | 4 / 8 / 12 / 16 / 20 | ✓ takes the extended set |
+| frames | `input_reference` = first frame | passthrough | null | ✓ `first_frame` (OR omits it from the frame enum) |
+| seed | not supported | — | false | ✓ |
+| audio | yes | passthrough | true | ✓ |
 
 ### Wan 2.6 / 2.7
 
-| 字段 | 官方 | 网关 | OR | 状态 |
+| Field | Official | Gateway | OR | Status |
 |---|---|---|---|---|
-| resolution | 480P / 720P / 1080P | 透传 | 720p / 1080p | ✓ 按官方(含 `480p`) |
-| sizes | 像素,随首帧比例自适应 | `x`→`*` + 按模型填默认 | 2.6:4 个;2.7:10 个 | ✓ 同 OR 像素集 |
-| duration | 2–15s | 透传(不 clamp) | 2.6:[5,10];2.7:[2–10] | ✓ 按官方 2–15(网关透传) |
-| frames | first_frame + last_frame + 参考图 | 全支持 | 2.6:first;2.7:first+last | ✓ 同 OR(2.6 首帧、2.7 首尾帧) |
-| audio | wan2.5/2.6 默认有声 | 默认 audio=true | true | ✓ |
+| resolution | 480P / 720P / 1080P | passthrough | 720p / 1080p | ✓ follows Official (incl. `480p`) |
+| sizes | pixels, adapts to first-frame ratio | `x`→`*` + per-model default | 2.6: 4; 2.7: 10 | ✓ same pixel set as OR |
+| duration | 2–15s | passthrough (no clamp) | 2.6: [5,10]; 2.7: [2–10] | ✓ follows Official 2–15 (gateway passthrough) |
+| frames | first_frame + last_frame + reference | all supported | 2.6: first; 2.7: first+last | ✓ same as OR (2.6 first frame, 2.7 first+last) |
+| audio | wan2.5/2.6 default on | default audio=true | true | ✓ |
 
 ### Veo 3.1 / 3.1 Lite
 
-| 字段 | 官方 | 网关 | OR | 状态 |
+| Field | Official | Gateway | OR | Status |
 |---|---|---|---|---|
-| frames | `image`(首帧)+ `lastFrame`(尾帧)+ `referenceImages`(asset) | **仅 referenceImages(asset)** | first_frame, last_frame | ⚠️ 网关只支持 asset 参考图,本包标 `reference_image`,**无法对齐**官方/OR 的首尾帧 |
-| resolution | 3.1:720p/1080p/4K;Lite:720p/1080p | 别名归一化 | 同官方 | ✓ |
-| 比例 | 16:9 / 9:16 | 透传 | 16:9 / 9:16 | ✓ |
-| duration | 4 / 6 / 8 | 透传 | 4 / 6 / 8 | ✓ |
-| seed / audio | 支持 / 支持 | 透传 | true / true | ✓ |
+| frames | `image` (first) + `lastFrame` (last) + `referenceImages` (asset) | **referenceImages (asset) only** | first_frame, last_frame | ⚠️ gateway supports only an asset reference; package declares `reference_image`, **cannot align** with Official/OR first+last frame |
+| resolution | 3.1: 720p/1080p/4K; Lite: 720p/1080p | alias normalization | same as Official | ✓ |
+| aspect | 16:9 / 9:16 | passthrough | 16:9 / 9:16 | ✓ |
+| duration | 4 / 6 / 8 | passthrough | 4 / 6 / 8 | ✓ |
+| seed / audio | yes / yes | passthrough | true / true | ✓ |
 
-> **前端注意**:① 默认 size/比例**各模型不同**(Sora 默认竖屏、Wan/Veo 默认横屏),不可用统一默认;② SeeDance 的 `9:21` 仅在以 `ratio` 直传时生效;③ Veo 的 i2v 是 asset 风格参考图,非首/尾帧。
+> **Front-end notes**: (1) default size/aspect **differ per model** (Sora defaults to portrait, Wan/Veo to landscape) — don't use a single default; (2) SeeDance's `9:21` only works via direct `ratio`; (3) Veo's i2v is an asset-style reference image, not a first/last frame.
 >
-> 来源:[Ark Seedance](https://www.volcengine.com/docs/82379/1520757)、[万相图生视频](https://help.aliyun.com/zh/model-studio/image-to-video-api-reference/)、[OpenAI Sora](https://developers.openai.com/api/docs/guides/video-generation)、[Gemini Veo](https://ai.google.dev/gemini-api/docs/video);OpenRouter `/api/v1/videos/models`;AIHubMix 网关实测行为。
+> Sources: [Ark Seedance](https://www.volcengine.com/docs/82379/1520757), [Wan image-to-video](https://help.aliyun.com/zh/model-studio/image-to-video-api-reference/), [OpenAI Sora](https://developers.openai.com/api/docs/guides/video-generation), [Gemini Veo](https://ai.google.dev/gemini-api/docs/video); OpenRouter `/api/v1/videos/models`; AIHubMix gateway observed behavior.
 
 ## Usage
 
