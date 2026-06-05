@@ -15,6 +15,9 @@ describe('seed — coverage of aihubmix-video live catalogue', () => {
     for (const id of [
       'doubao-seedance-2-0-260128',
       'doubao-seedance-2-0-fast-260128',
+      'doubao-seedance-1-0-pro-250528',
+      'doubao-seedance-1-0-pro-fast-251015',
+      'doubao-seedance-1-5-pro-251215',
       'sora-2',
       'sora-2-pro',
       'wan2.6-t2v',
@@ -61,6 +64,19 @@ describe('seed — coverage of aihubmix-video live catalogue', () => {
     expect(s.supportedFrameImages).toEqual(['first_frame', 'last_frame', 'reference_image']);
     expect(s).toMatchObject({ generateAudio: true, seed: true, watermark: true, cameraFixed: true });
     expect(s.caps).toEqual(['t2v', 'i2v']);
+  });
+
+  it('seedance 1.x: first-frame ONLY (no reference_image/r2v); 2.0 keeps reference_image', () => {
+    for (const id of [
+      'doubao-seedance-1-0-pro-250528',
+      'doubao-seedance-1-0-pro-fast-251015',
+      'doubao-seedance-1-5-pro-251215',
+    ]) {
+      expect(get(id).family, id).toBe('seedance');
+      expect(get(id).supportedFrameImages, id).toEqual(['first_frame']);
+    }
+    // 2.0 still supports r2v (reference_image) — regression guard.
+    expect(get('doubao-seedance-2-0-260128').supportedFrameImages).toContain('reference_image');
   });
 
   it('sora-2: 4 supported sizes (enriched from 2) + duration enum', () => {

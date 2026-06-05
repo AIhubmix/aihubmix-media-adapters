@@ -283,7 +283,14 @@ export function buildVideoRequest(cap: ModelCapability, input: VideoBuildInput):
     }
     // The field name `dataUrl` carries the final input_reference value, which may
     // be a data URL or a public URL — the caller resolves it; we only place it.
-    if (hasReference) body.input_reference = input.imageRef!.dataUrl;
+    // Sora requires the OBJECT form `{ image_url }` (gateway/OpenAI 400s on a
+    // string); wan2.x and other generic vendors accept the bare string. The
+    // `referenceAsObject` capability flag selects the shape per model.
+    if (hasReference) {
+      body.input_reference = cap.referenceAsObject
+        ? { image_url: input.imageRef!.dataUrl }
+        : input.imageRef!.dataUrl;
+    }
   }
 
   mergeExtraBody(body, cap, input.passthrough);

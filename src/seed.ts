@@ -72,6 +72,62 @@ export const AIHUBMIX_VIDEO_SEED: ModelCapability[] = [
     watermark: true,
     cameraFixed: true,
   },
+  // SeeDance 1.x — i2v is FIRST-FRAME ONLY. Upstream maps reference_image→r2v,
+  // which 1.x rejects ("task_type r2v does not support model …"); only 2.0 has r2v.
+  // The CRITICAL constraint here is `supportedFrameImages: ['first_frame']` (no
+  // reference_image). resolutions / durationRange / toggles are placeholders
+  // copied from 2.0 — verify against each 1.x model's real limits.
+  {
+    id: 'doubao-seedance-1-0-pro-250528',
+    apiModel: 'doubao-seedance-1-0-pro-250528',
+    label: 'SeeDance 1.0 Pro',
+    vendorGroup: 'ByteDance',
+    mediaType: 'video',
+    family: 'seedance',
+    caps: ['t2v', 'i2v'],
+    supportedFrameImages: ['first_frame'],
+    supportedAspectRatios: SEEDANCE_ASPECTS,
+    supportedResolutions: ['480p', '720p'],
+    durationRange: { min: 4, max: 15 },
+    generateAudio: true,
+    seed: true,
+    watermark: true,
+    cameraFixed: true,
+  },
+  {
+    id: 'doubao-seedance-1-0-pro-fast-251015',
+    apiModel: 'doubao-seedance-1-0-pro-fast-251015',
+    label: 'SeeDance 1.0 Pro Fast',
+    vendorGroup: 'ByteDance',
+    mediaType: 'video',
+    family: 'seedance',
+    caps: ['t2v', 'i2v'],
+    supportedFrameImages: ['first_frame'],
+    supportedAspectRatios: SEEDANCE_ASPECTS,
+    supportedResolutions: ['480p', '720p'],
+    durationRange: { min: 4, max: 15 },
+    generateAudio: true,
+    seed: true,
+    watermark: true,
+    cameraFixed: true,
+  },
+  {
+    id: 'doubao-seedance-1-5-pro-251215',
+    apiModel: 'doubao-seedance-1-5-pro-251215',
+    label: 'SeeDance 1.5 Pro',
+    vendorGroup: 'ByteDance',
+    mediaType: 'video',
+    family: 'seedance',
+    caps: ['t2v', 'i2v'],
+    supportedFrameImages: ['first_frame'],
+    supportedAspectRatios: SEEDANCE_ASPECTS,
+    supportedResolutions: ['480p', '720p'],
+    durationRange: { min: 4, max: 15 },
+    generateAudio: true,
+    seed: true,
+    watermark: true,
+    cameraFixed: true,
+  },
 
   // ── OpenAI Sora — generic flat shape with input_reference ────────────────
   {
@@ -87,6 +143,8 @@ export const AIHUBMIX_VIDEO_SEED: ModelCapability[] = [
     supportedDurations: [4, 8, 12],
     // AIHubMix gateway wants `seconds` as a string enum ('4'/'8'/'12').
     secondsFormat: 'string',
+    // Sora i2v: input_reference must be an OBJECT ({ image_url }); string 400s.
+    referenceAsObject: true,
     xSource: { from: 'avs://openai/official', authority: 'official' },
   },
   {
@@ -110,6 +168,8 @@ export const AIHUBMIX_VIDEO_SEED: ModelCapability[] = [
     generateAudio: true,
     // AIHubMix gateway wants `seconds` as a string enum ('4'/'8'/'12').
     secondsFormat: 'string',
+    // Sora i2v: input_reference must be an OBJECT ({ image_url }); string 400s.
+    referenceAsObject: true,
     xSource: { from: 'avs://openai/official', authority: 'official' },
   },
 

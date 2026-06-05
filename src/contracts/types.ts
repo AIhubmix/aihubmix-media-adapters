@@ -92,6 +92,14 @@ export interface ModelCapability {
    * their own `duration` field, so this flag is a no-op for them.)
    */
   secondsFormat?: 'string' | 'number';
+  /**
+   * `generic` family ONLY. When true, the reference image rides as an OBJECT
+   * `input_reference: { image_url: <url> }` instead of a bare string. OpenAI's
+   * Videos API (Sora) requires the object form ({ image_url } or { file_id }) and
+   * 400s on a string; other generic vendors (wan2.x) accept the bare string, so
+   * this flag is opt-in per model.
+   */
+  referenceAsObject?: boolean;
 
   /** Whitelist of vendor-specific params the caller may pass through. */
   allowedPassthroughParameters?: string[];

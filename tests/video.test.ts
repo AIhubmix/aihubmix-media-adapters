@@ -356,6 +356,19 @@ describe('buildVideoRequest — generic family (sora + wan2.x + jimeng)', () => 
     const built2 = buildVideoRequest(WAN, { prompt: 'a', durationSeconds: 5, imageRef: { dataUrl: 'https://x/y.png' } });
     expect(built2.body.input_reference).toBe('https://x/y.png');
   });
+
+  it('i2v input_reference shape: Sora → OBJECT { image_url }, wan → bare string (registry caps)', () => {
+    // Sora requires the object form; gateway/OpenAI 400s on a string.
+    const sora = aihubmixMediaRegistry.get('sora-2')!;
+    const s = buildVideoRequest(sora, { prompt: 'animate', durationSeconds: 8, imageRef: { dataUrl: DATA_URL } });
+    expect(typeof s.body.input_reference).toBe('object');
+    expect(s.body.input_reference).toEqual({ image_url: DATA_URL });
+    // wan keeps the bare string (verified working) — must NOT regress to an object.
+    const wan = aihubmixMediaRegistry.get('wan2.6-i2v')!;
+    const w = buildVideoRequest(wan, { prompt: 'animate', durationSeconds: 5, imageRef: { dataUrl: DATA_URL } });
+    expect(typeof w.body.input_reference).toBe('string');
+    expect(w.body.input_reference).toBe(DATA_URL);
+  });
 });
 
 describe('buildVideoRequest — apiModelI2V + passthrough', () => {
