@@ -355,11 +355,11 @@ export const AIHUBMIX_VIDEO_SEED: ModelCapability[] = [
   },
 
   // ── Google Veo — own `veo` family (Gemini predictLongRunning shim) ───────
-  // Flat body, seconds NUMBER, size only; 4/6/8s. i2v is supported via a single
-  // reference image: the gateway maps `input_reference` → Veo `referenceImages`
-  // ({image, referenceType:'asset'}). This is an ASSET/style reference, NOT the
-  // native `image`(first_frame)/`lastFrame`(last_frame) interpolation — the
-  // gateway does not expose those — so the frame role is `reference_image`.
+  // Flat body, seconds NUMBER, size only; 4/6/8s. TEXT-TO-VIDEO ONLY on the
+  // AIHubMix gateway: although config-gemini maps `input_reference` →
+  // `referenceImages`, the Veo predictLongRunning endpoint does not accept it for
+  // `veo-3.1-generate-preview` end-to-end (verified by testing), so any i2v form
+  // is rejected. No `supportedFrameImages` → callers gate i2v out via caps.
   {
     id: 'veo-3.1-generate-preview',
     apiModel: 'veo-3.1-generate-preview',
@@ -367,8 +367,7 @@ export const AIHUBMIX_VIDEO_SEED: ModelCapability[] = [
     vendorGroup: 'Google',
     mediaType: 'video',
     family: 'veo',
-    caps: ['t2v', 'i2v'],
-    supportedFrameImages: ['reference_image'],
+    caps: ['t2v'],
     supportedResolutions: ['720p', '1080p', '4K'],
     supportedAspectRatios: ['16:9', '9:16'],
     supportedDurations: [4, 6, 8],
@@ -382,8 +381,7 @@ export const AIHUBMIX_VIDEO_SEED: ModelCapability[] = [
     vendorGroup: 'Google',
     mediaType: 'video',
     family: 'veo',
-    caps: ['t2v', 'i2v'],
-    supportedFrameImages: ['reference_image'],
+    caps: ['t2v'],
     supportedResolutions: ['720p', '1080p'],
     supportedAspectRatios: ['16:9', '9:16'],
     supportedDurations: [4, 6, 8],

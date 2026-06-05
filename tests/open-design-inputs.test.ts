@@ -60,14 +60,12 @@ describe('open-design input style → gateway-valid bodies', () => {
     expect(built.body.seconds).toBe('8'); // string enum, as open-design verified
   });
 
-  it('veo: a 1:1 pixel size is snapped to a valid Veo size; i2v emits input_reference', () => {
+  it('veo: a 1:1 pixel size is snapped to a valid Veo size; t2v-only (no input_reference)', () => {
     const cap = aihubmixMediaRegistry.get('veo-3.1-generate-preview')!;
-    const built = buildLikeOpenDesign(cap, '1:1', 8, DATA); // with a reference image
+    const built = buildLikeOpenDesign(cap, '1:1', 8, DATA); // even with a reference image…
     expect(built.body.size).toBe('1280x720');
-    expect(built.body.input_reference).toBe(DATA); // gateway → Veo referenceImages asset
+    expect(built.body.input_reference).toBeUndefined(); // …veo i2v is rejected, so none is sent
     expect(typeof built.body.seconds).toBe('number');
-    // no reference → no input_reference
-    expect(buildLikeOpenDesign(cap, '1:1', 8).body.input_reference).toBeUndefined();
   });
 
   it('regression guard: no open-design aspect yields a raw WxH where the gateway 400s', () => {

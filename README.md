@@ -37,7 +37,7 @@ package carries the client-side mapping.
 |---|---|---|
 | `seedance` | `doubao-seedance-*` | multimodal `content[]` (text + `image_url{url,role}`); `duration` number, `resolution` token, optional `ratio`/`watermark`/`camera_fixed`/`seed`/`generate_audio` |
 | `dashscope` | `happyhorse-*` (Alibaba ATH), `wan2.7-i2v` | `{ input:{ prompt, media:[{type:first_frame\|last_frame,url}] }, parameters:{ resolution(UPPER), duration, prompt_extend, watermark } }` |
-| `veo` | `veo-*` | flat `{ prompt, seconds(NUMBER), size, input_reference? }`; i2v via a single reference image (gateway maps to Veo `referenceImages` asset — not first/last frame) |
+| `veo` | `veo-*` | flat `{ prompt, seconds(NUMBER), size }`; **t2v-only** (Gemini predictLongRunning shim — i2v rejected end-to-end) |
 | `generic` | `sora-*`, `wan2.x`, `jimeng-*`, … | flat `{ prompt, seconds, size?, input_reference? }`; `seconds` form via `secondsFormat`; `aspect_ratio` never sent |
 
 `happyhorse(dashscope)` / `wan` / `veo` are verified against the live AIHubMix
@@ -110,13 +110,13 @@ Legend: **✓** aligned in this package; **⚠️** has a difference/limitation 
 
 | Field | Official | Gateway | OR | Status |
 |---|---|---|---|---|
-| frames | `image` (first) + `lastFrame` (last) + `referenceImages` (asset) | **referenceImages (asset) only** | first_frame, last_frame | ⚠️ gateway supports only an asset reference; package declares `reference_image`, **cannot align** with Official/OR first+last frame |
+| frames | `image` (first) + `lastFrame` (last) + `referenceImages` (asset) | **i2v rejected end-to-end** (t2v-only) | first_frame, last_frame | ⚠️ package is **t2v-only**: the gateway's `input_reference`→`referenceImages` mapping is not accepted by Veo in practice, so no `supportedFrameImages` is declared |
 | resolution | 3.1: 720p/1080p/4K; Lite: 720p/1080p | alias normalization | same as Official | ✓ |
 | aspect | 16:9 / 9:16 | passthrough | 16:9 / 9:16 | ✓ |
 | duration | 4 / 6 / 8 | passthrough | 4 / 6 / 8 | ✓ |
 | seed / audio | yes / yes | passthrough | true / true | ✓ |
 
-> **Front-end notes**: (1) default size/aspect **differ per model** (Sora defaults to portrait, Wan/Veo to landscape) — don't use a single default; (2) SeeDance's `9:21` only works via direct `ratio`; (3) Veo's i2v is an asset-style reference image, not a first/last frame.
+> **Front-end notes**: (1) default size/aspect **differ per model** (Sora defaults to portrait, Wan/Veo to landscape) — don't use a single default; (2) SeeDance's `9:21` only works via direct `ratio`; (3) Veo is **t2v-only** on the gateway — image-to-video is rejected end-to-end.
 >
 > Sources: [Ark Seedance](https://www.volcengine.com/docs/82379/1520757), [Wan image-to-video](https://help.aliyun.com/zh/model-studio/image-to-video-api-reference/), [OpenAI Sora](https://developers.openai.com/api/docs/guides/video-generation), [Gemini Veo](https://ai.google.dev/gemini-api/docs/video); OpenRouter `/api/v1/videos/models`; AIHubMix gateway observed behavior.
 

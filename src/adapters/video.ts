@@ -245,10 +245,9 @@ export function buildVideoRequest(cap: ModelCapability, input: VideoBuildInput):
     // Google Veo via the gateway's OpenAI→Gemini predictLongRunning shim. Unlike
     // the generic branch, `seconds` MUST be a number and `size` is the only size
     // hint it honours — sending the string "8" or an extra `aspect_ratio` makes
-    // it fail. i2v: the gateway maps a single `input_reference` image to Veo's
-    // `referenceImages` (an ASSET/style reference, NOT first_frame/last_frame
-    // interpolation — those aren't exposed). So we attach only `imageRef`; any
-    // `lastFrameRef`/extras are ignored for veo.
+    // it fail. TEXT-TO-VIDEO ONLY: every reference-image form is rejected by the
+    // shim end-to-end (the gateway's input_reference→referenceImages mapping is
+    // not accepted by Veo), so we never attach one — callers gate i2v out via caps.
     body = {
       model: wireModel,
       prompt: input.prompt,
@@ -259,9 +258,6 @@ export function buildVideoRequest(cap: ModelCapability, input: VideoBuildInput):
     };
     if (typeof input.generateAudio === 'boolean') body.generate_audio = input.generateAudio;
     if (typeof input.seed === 'number') body.seed = input.seed;
-    // Reference image as a data/public URL string — the gateway resolves it and
-    // converts to a Veo referenceImages asset entry.
-    if (hasReference) body.input_reference = input.imageRef!.dataUrl;
   } else {
     // Generic OpenAI-style /videos (sora / wan2.x / jimeng / …). The size hint is
     // `size` — NOT `aspect_ratio`, which Sora rejects with "Unknown parameter:

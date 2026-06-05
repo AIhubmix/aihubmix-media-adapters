@@ -19,7 +19,7 @@ AIHubMix 是一个**透传**网关:每个上游厂商保留各自的原生请求
 |---|---|---|
 | `seedance` | `doubao-seedance-*` | 多模态 `content[]`(text + `image_url{url,role}`);`duration` 数字、`resolution` token,可选 `ratio`/`watermark`/`camera_fixed`/`seed`/`generate_audio` |
 | `dashscope` | `happyhorse-*`(Alibaba ATH)、`wan2.7-i2v` | `{ input:{ prompt, media:[{type:first_frame\|last_frame,url}] }, parameters:{ resolution(大写), duration, prompt_extend, watermark } }` |
-| `veo` | `veo-*` | 扁平 `{ prompt, seconds(数字), size, input_reference? }`;i2v 走单张参考图(网关映射为 Veo `referenceImages` asset——非首/尾帧) |
+| `veo` | `veo-*` | 扁平 `{ prompt, seconds(数字), size }`;**仅 t2v**(Gemini predictLongRunning shim——i2v 端到端被拒) |
 | `generic` | `sora-*`、`wan2.x`、`jimeng-*`、… | 扁平 `{ prompt, seconds, size?, input_reference? }`;`seconds` 形态由 `secondsFormat` 决定;从不发送 `aspect_ratio` |
 
 `happyhorse(dashscope)` / `wan` / `veo` 已对 AIHubMix 线上网关验证、稳定。`seedance` / `generic` 是一个**同时服务两个调用方的超集**:snap 辅助函数会归一化偏宽的输入(由比例推出的像素 size、裸宽高比),但对**已归一化的输入是 no-op**(一个 `720p` token、一个已声明的 supported size)。因此 UI 已约束输入的调用方(aihubmix-video)字节原样通过,而传入原始聊天工具输入的调用方(open-design)会被纠正——两者走同一代码路径。见 `tests/parity-aihubmix-video.test.ts` 与 `tests/open-design-inputs.test.ts`。
@@ -84,13 +84,13 @@ AIHubMix 是一个**透传**网关:每个上游厂商保留各自的原生请求
 
 | 字段 | 官方 | 网关 | OR | 状态 |
 |---|---|---|---|---|
-| frames | `image`(首帧)+ `lastFrame`(尾帧)+ `referenceImages`(asset) | **仅 referenceImages(asset)** | first_frame, last_frame | ⚠️ 网关只支持 asset 参考图,本包标 `reference_image`,**无法对齐**官方/OR 的首尾帧 |
+| frames | `image`(首帧)+ `lastFrame`(尾帧)+ `referenceImages`(asset) | **i2v 端到端被拒**(仅 t2v) | first_frame, last_frame | ⚠️ 本包**仅 t2v**:网关虽有 `input_reference`→`referenceImages` 映射,但 Veo 实测不接受,故不声明 `supportedFrameImages` |
 | resolution | 3.1:720p/1080p/4K;Lite:720p/1080p | 别名归一化 | 同官方 | ✓ |
 | 比例 | 16:9 / 9:16 | 透传 | 16:9 / 9:16 | ✓ |
 | duration | 4 / 6 / 8 | 透传 | 4 / 6 / 8 | ✓ |
 | seed / audio | 支持 / 支持 | 透传 | true / true | ✓ |
 
-> **前端注意**:① 默认 size/比例**各模型不同**(Sora 默认竖屏、Wan/Veo 默认横屏),不可用统一默认;② SeeDance 的 `9:21` 仅在以 `ratio` 直传时生效;③ Veo 的 i2v 是 asset 风格参考图,非首/尾帧。
+> **前端注意**:① 默认 size/比例**各模型不同**(Sora 默认竖屏、Wan/Veo 默认横屏),不可用统一默认;② SeeDance 的 `9:21` 仅在以 `ratio` 直传时生效;③ Veo 在网关上**仅 t2v**,图生视频端到端被拒。
 >
 > 来源:[Ark Seedance](https://www.volcengine.com/docs/82379/1520757)、[万相图生视频](https://help.aliyun.com/zh/model-studio/image-to-video-api-reference/)、[OpenAI Sora](https://developers.openai.com/api/docs/guides/video-generation)、[Gemini Veo](https://ai.google.dev/gemini-api/docs/video);OpenRouter `/api/v1/videos/models`;AIHubMix 网关实测行为。
 

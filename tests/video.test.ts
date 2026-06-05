@@ -27,9 +27,7 @@ const VEO: ModelCapability = {
   apiModel: 'veo-3.1-generate-preview',
   mediaType: 'video',
   family: 'veo',
-  // i2v via a single reference image (gateway maps input_reference → referenceImages asset).
-  caps: ['t2v', 'i2v'],
-  supportedFrameImages: ['reference_image'],
+  caps: ['t2v'], // veo is text-to-video only on the AIHubMix gateway (i2v rejected end-to-end)
   supportedDurations: [4, 6, 8],
 };
 
@@ -270,23 +268,18 @@ describe('buildVideoRequest — veo family [verified, unchanged]', () => {
     expect(built.body.size).toBe('1280x720');
   });
 
-  it('i2v: emits input_reference (gateway maps it to a referenceImages asset)', () => {
-    const built = buildVideoRequest(VEO, { prompt: 'clip', durationSeconds: 6, imageRef: { dataUrl: DATA_URL } });
-    expect(built.hasReference).toBe(true);
-    expect(built.body.input_reference).toBe(DATA_URL);
-    expect(built.body.seconds).toBe(6);
-  });
-
-  it('i2v: ignores lastFrameRef/extras — veo takes only a single reference asset', () => {
+  it('t2v-only: never emits input_reference even if a reference image is passed', () => {
+    // veo i2v is rejected end-to-end on the gateway; the adapter must not attach one.
     const built = buildVideoRequest(VEO, {
       prompt: 'clip',
+      durationSeconds: 6,
       imageRef: { dataUrl: DATA_URL },
       lastFrameRef: { dataUrl: 'data:image/png;base64,LAST' },
       extraImageRefs: [{ dataUrl: 'data:image/png;base64,REF' }],
     });
-    expect(built.body.input_reference).toBe(DATA_URL);
-    // no first_frame/last_frame plumbing for veo
+    expect(built.body.input_reference).toBeUndefined();
     expect(JSON.stringify(built.body)).not.toContain('last_frame');
+    expect(built.body.seconds).toBe(6);
   });
 });
 

@@ -104,11 +104,12 @@ describe('seed — coverage of aihubmix-video live catalogue', () => {
     expect(get('wan2.7-i2v').supportedFrameImages).toEqual(['first_frame', 'last_frame']);
   });
 
-  it('veo: i2v via reference_image asset + resolutions (4K on 3.1, none on lite)', () => {
+  it('veo: t2v-only (i2v rejected by gateway) + resolutions (4K on 3.1, none on lite)', () => {
     const v = get('veo-3.1-generate-preview');
-    expect(v.caps).toEqual(['t2v', 'i2v']);
-    expect(v.supportedFrameImages).toEqual(['reference_image']);
+    expect(v.caps).toEqual(['t2v']);
+    expect(v.supportedFrameImages).toBeUndefined();
     expect(v.supportedResolutions).toEqual(['720p', '1080p', '4K']);
+    expect(get('veo-3.1-lite-generate-preview').caps).toEqual(['t2v']);
     expect(get('veo-3.1-lite-generate-preview').supportedResolutions).toEqual(['720p', '1080p']);
   });
 
